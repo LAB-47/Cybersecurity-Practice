@@ -1,0 +1,6 @@
+# Custom .gitignore for Lab Reports repository
+.obsidian/
+*.pdf
+*.pptx
+*.zip
+*.tar.gz
