@@ -4,3 +4,20 @@
 *.pptx
 *.zip
 *.tar.gz
+
+# Large forensic image files (GitHub 100MB limit)
+*.E01
+BSidesAmman21.E01/
+*.raw
+*.dd
+*.vmdk
+*.iso
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+
+# OS artifacts
+Thumbs.db
+.DS_Store
