@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Windows Shell Link (.LNK) Directory Artifact Forensic Parser
-Standard: ISO/IEC 27037 Digital Evidence Handling
-Examiner: Ostap Chemerys (Chemeris Ostap)
+Windows Shell Link (.LNK) Directory Parser
 """
 import io
 import sys
 import os
 import re
 import struct
-import binascii
 import argparse
 from dissect.evidence.ewf import EWF
 from dissect.ntfs import NTFS
@@ -19,14 +16,16 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 
-def parse_recent_lnk(image_path, user='Joker'):
+def parse_shell_links(image_path, rel_dir='Users/Joker/AppData/Roaming/Microsoft/Windows/Recent'):
     if not os.path.exists(image_path):
-        print(f"[ERROR] Evidence file not found: {image_path}", file=sys.stderr)
+        print(f"Error: File not found - {image_path}", file=sys.stderr)
         sys.exit(1)
 
-    print("=" * 80)
-    print("WINDOWS SHELL LINK (.LNK) RECENT DIRECTORY ARTIFACT PARSER")
-    print("=" * 80)
+    print("================================================================================")
+    print("WINDOWS SHELL LINK (.LNK) DIRECTORY PARSER")
+    print("================================================================================")
+    print(f"Evidence File:  {image_path}")
+    print(f"Directory Path: C:\\{rel_dir.replace('/', chr(92))}")
 
     fh = open(image_path, 'rb')
     ewf = EWF(fh)
@@ -47,17 +46,15 @@ def parse_recent_lnk(image_path, user='Joker'):
             curr = match
         return curr
 
-    recent_rel_path = f'Users/{user}/AppData/Roaming/Microsoft/Windows/Recent'
-    recent_dir = get_rec_by_path(recent_rel_path)
+    recent_dir = get_rec_by_path(rel_dir)
     if not recent_dir:
-        print(f"[!] Recent directory not found: {recent_rel_path}")
+        print(f"[!] Target directory not found: {rel_dir}")
         return
 
-    print(f"Directory: C:\\{recent_rel_path.replace('/', chr(92))}")
-    print(f"MFT Record: #{recent_dir.segment}\n")
+    print(f"MFT Record:     #{recent_dir.segment}\n")
 
     lnk_entries = sorted(recent_dir.listdir().items())
-    parsed_links = []
+    total_parsed = 0
 
     for name, entry in lnk_entries:
         if not name.lower().endswith('.lnk') or '~1.LNK' in name:
@@ -91,18 +88,8 @@ def parse_recent_lnk(image_path, user='Joker'):
         except Exception:
             target_size, ctime, mtime, atime, vsn = 0, 'N/A', 'N/A', 'N/A', None
 
-        parsed_links.append({
-            'name': name,
-            'mft': rec.segment,
-            'size': len(rdata),
-            'target': resolved_target,
-            'ctime': ctime,
-            'mtime': mtime,
-            'atime': atime,
-            'vsn': f"0x{vsn:08X}" if vsn else "N/A"
-        })
-
-        print(f"[+] LNK File: {name:<25} (MFT #{rec.segment}, File Size: {len(rdata)} bytes)")
+        total_parsed += 1
+        print(f"[+] LNK File: {name:<25} (MFT #{rec.segment}, Size: {len(rdata)} bytes)")
         print(f"    LinkFlags:       0x{flags:08X} (Header: {hdr_size} bytes)")
         print(f"    Resolved Target: {resolved_target}")
         print(f"    Target Size:     {target_size} bytes")
@@ -112,14 +99,13 @@ def parse_recent_lnk(image_path, user='Joker'):
         print(f"    Target Accessed: {atime}\n")
 
     print("=" * 80)
-    print(f"INVENTORY SUMMARY: {len(parsed_links)} SHELL LINK ARTIFACTS ENUMERATED")
+    print(f"TOTAL PARSED: {total_parsed} SHELL LINK FILES")
     print("=" * 80)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Windows Shell Link (.LNK) Parser")
+    parser = argparse.ArgumentParser(description="Shell Link (.LNK) Parser")
     parser.add_argument('--image', default=r'c:\мої локальні файли\AntiIDE\BSidesAmman21.E01\BSidesAmman21.E01',
-                        help='Path to E01 evidence file')
-    parser.add_argument('--user', default='Joker', help='User profile name')
+                        help='Path to E01 evidence image')
     args = parser.parse_args()
-    parse_recent_lnk(args.image, args.user)
+    parse_shell_links(args.image)

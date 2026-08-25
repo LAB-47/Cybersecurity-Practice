@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Windows Application Execution Evidence Parser (Prefetch & UserAssist)
-Standard: ISO/IEC 27037 Digital Evidence Handling
-Examiner: Ostap Chemerys (Chemeris Ostap)
+Windows Execution Telemetry Extractor (Prefetch & UserAssist)
 """
 import io
 import sys
@@ -20,14 +18,15 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 
-def parse_execution_artifacts(image_path, user='Joker', target_app='wordpad'):
+def extract_execution_telemetry(image_path, user='Joker', target_app='wordpad'):
     if not os.path.exists(image_path):
-        print(f"[ERROR] Evidence file not found: {image_path}", file=sys.stderr)
+        print(f"Error: File not found - {image_path}", file=sys.stderr)
         sys.exit(1)
 
-    print("=" * 80)
-    print("APPLICATION EXECUTION ARTIFACTS PARSER (PREFETCH & USERASSIST)")
-    print("=" * 80)
+    print("================================================================================")
+    print("WINDOWS EXECUTION TELEMETRY (PREFETCH & USERASSIST)")
+    print("================================================================================")
+    print(f"Evidence File: {image_path}")
 
     fh = open(image_path, 'rb')
     ewf = EWF(fh)
@@ -48,24 +47,22 @@ def parse_execution_artifacts(image_path, user='Joker', target_app='wordpad'):
             curr = match
         return curr
 
-    # 1. Windows Prefetch Inspection
-    print("\n--- 1. Windows Prefetch Artifact Inspection ---")
+    # 1. Prefetch
+    print("\n--- 1. Windows Prefetch Descriptor ---")
     pf_path = 'Windows/Prefetch/WORDPAD.EXE-942EAA71.pf'
     pf_rec = get_rec_by_path(pf_path)
     if pf_rec:
         pf_data = pf_rec.open().read()
         si = pf_rec.attributes[16][0].attribute
-        print(f"Prefetch File:     C:\\{pf_path.replace('/', chr(92))}")
+        print(f"Prefetch Path:     C:\\{pf_path.replace('/', chr(92))}")
         print(f"MFT Record:        #{pf_rec.segment}")
-        print(f"File Size:         {len(pf_data):,} bytes")
+        print(f"File Size:         {len(pf_data)} bytes")
         print(f"Header Signature:  {pf_data[:4]} (Hex: {binascii.hexlify(pf_data[:4]).decode('ascii')})")
-        print(f"File Created:      {si.creation_time}")
-        print(f"File Modified:     {si.last_modification_time} (SysMain Flush Timestamp)")
-    else:
-        print(f"[!] Prefetch file not found: {pf_path}")
+        print(f"MFT Created Time:  {si.creation_time}")
+        print(f"MFT Modified Time: {si.last_modification_time}")
 
-    # 2. UserAssist Registry Hive Analysis
-    print("\n--- 2. NTUSER.DAT UserAssist Artifact Analysis ---")
+    # 2. UserAssist
+    print("\n--- 2. NTUSER.DAT UserAssist Descriptor ---")
     ntuser_path = f'Users/{user}/NTUSER.DAT'
     ntuser_rec = get_rec_by_path(ntuser_path)
     if not ntuser_rec:
@@ -86,25 +83,23 @@ def parse_execution_artifacts(image_path, user='Joker', target_app='wordpad'):
             filetime = struct.unpack('<Q', raw_val[60:68])[0]
             dt = datetime.datetime(1601, 1, 1, tzinfo=datetime.timezone.utc) + datetime.timedelta(microseconds=filetime / 10)
 
-            print(f"Registry Value:      {raw_name}")
+            print(f"Registry Key Name:   {raw_name}")
             print(f"Decoded Application: {decoded_name}")
-            print(f"Execution Run Count: {count}")
-            print(f"Raw FILETIME (Hex):  0x{filetime:016X}")
-            print(f"Last Execution UTC:  {dt.strftime('%Y-%m-%d %H:%M:%S UTC')}\n")
-            print("Raw Binary Structure Dump (72 Bytes):")
+            print(f"Execution Counter:   {count}")
+            print(f"FILETIME Hex:        0x{filetime:016X}")
+            print(f"Timestamp (UTC):     {dt.strftime('%Y-%m-%d %H:%M:%S UTC')}\n")
+            print("Raw Structure Hex Dump (72 bytes):")
             for i in range(0, len(raw_val), 16):
                 chunk = raw_val[i:i + 16]
                 hex_str = ' '.join(f'{b:02x}' for b in chunk)
                 asc_str = ''.join(chr(b) if 32 <= b <= 126 else '.' for b in chunk)
-                print(f"  Offset 0x{i:02X}:  {hex_str:<48}  |{asc_str}|")
+                print(f"  0x{i:02X}:  {hex_str:<48}  |{asc_str}|")
             break
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Application Execution Evidence Parser")
+    parser = argparse.ArgumentParser(description="Windows Execution Telemetry Extractor")
     parser.add_argument('--image', default=r'c:\мої локальні файли\AntiIDE\BSidesAmman21.E01\BSidesAmman21.E01',
-                        help='Path to E01 evidence file')
-    parser.add_argument('--user', default='Joker', help='User profile name')
-    parser.add_argument('--app', default='wordpad', help='Target application name')
+                        help='Path to E01 evidence image')
     args = parser.parse_args()
-    parse_execution_artifacts(args.image, args.user, args.app)
+    extract_execution_telemetry(args.image)
