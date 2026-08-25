@@ -1,0 +1,7 @@
+dissect>=3.0
+dissect.evidence.ewf>=3.0
+dissect.ntfs>=3.0
+dissect.ole>=3.0
+python-registry>=1.4.0
+LnkParse3>=1.4.0
+Pillow>=10.0.0
