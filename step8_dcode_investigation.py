@@ -89,6 +89,7 @@ for val in ua_key.values():
             hex_str = ' '.join(f'{b:02x}' for b in chunk)
             asc_str = ''.join(chr(b) if 32 <= b <= 126 else '.' for b in chunk)
             print(f"  Offset 0x{i:02X}:  {hex_str:<48}  |{asc_str}|")
+        break
 
 print("\n================================================================================")
 print("=== 3. PREFETCH ARTIFACT (Execution Proof of dd.exe) ===")
@@ -115,14 +116,10 @@ ie_found = [codecs.decode(v.name(), 'rot_13') for v in ua_ie.values() if any(k i
 print(f"Traces of dd.exe/DCode in IEUser UserAssist: {ie_found if ie_found else '0 (ЖОДНИХ СЛІДІВ)'}")
 
 print("\n================================================================================")
-print("=== EVIDENCE VERIFICATION RESULT (Questions 12, 13, 14, 15) ===")
+print("=== EVIDENCE VERIFICATION RESULT (Questions 12, 13, 14, 15 - Dynamic Evaluation) ===")
 print("================================================================================")
-print("Question 12 (Which user ran the application + evidence):")
-print("  Answer:   Joker")
-print("  Evidence: dd.exe has identical hash with DCode.exe; Joker's UserAssist & Prefetch record execution.")
-print("\nQuestion 13 (How many times was it used):")
-print("  Answer:   1 (Run Count = 1)")
-print("\nQuestion 14 (When was it last used in UTC):")
-print(f"  Answer:   2019-02-15 05:02:12 UTC")
-print("\nQuestion 15 (Where was the application located full path):")
-print("  Answer:   C:\\Users\\Joker\\dd.exe (executed path) / C:\\Users\\Joker\\DCode.exe")
+print(f"Question 12 (Suspect Account):        {'Joker' if count > 0 and len(ie_found) == 0 else 'Unknown'}")
+print(f"Question 13 (Dynamic Run Count):      {count}")
+print(f"Question 14 (Dynamic Last Used UTC):  {dt.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+print(f"Question 15 (Dynamic Executed Path):  {decoded_name}")
+print(f"Cross-Validation Hash Match:          {md5_dcode == md5_dd}")

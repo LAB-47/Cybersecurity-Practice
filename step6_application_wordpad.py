@@ -60,37 +60,43 @@ reg = Registry.Registry(io.BytesIO(ntuser_data))
 
 ua_key = reg.open('Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist\\{CEBFF5CD-ACE2-4F4F-9178-9926F41749EA}\\Count')
 
-found_wordpad = False
+wordpad_decoded_name = ""
+wordpad_count = 0
+wordpad_dt = None
+
 for val in ua_key.values():
     raw_name = val.name()
     decoded_name = codecs.decode(raw_name, 'rot_13')
     
     if 'wordpad' in decoded_name.lower():
         found_wordpad = True
+        wordpad_decoded_name = decoded_name
         raw_val = val.raw_data()
         
         # Парсинг бінарної структури UserAssist Win10 (72 байти)
-        session_id, count, focus_count, focus_time = struct.unpack('<IIII', raw_val[0:16])
+        session_id, wordpad_count, focus_count, focus_time = struct.unpack('<IIII', raw_val[0:16])
         filetime = struct.unpack('<Q', raw_val[60:68])[0]
-        dt = datetime.datetime(1601, 1, 1, tzinfo=datetime.timezone.utc) + datetime.timedelta(microseconds=filetime/10)
+        wordpad_dt = datetime.datetime(1601, 1, 1, tzinfo=datetime.timezone.utc) + datetime.timedelta(microseconds=filetime/10)
         
         print(f"ROT13 Encrypted Name: {raw_name}")
         print(f"Decoded Program Name: {decoded_name}")
-        print(f"Execution Run Count:  {count}")
-        print(f"Last Execution (UTC): {dt.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        print(f"Execution Run Count:  {wordpad_count}")
+        print(f"Last Execution (UTC): {wordpad_dt.strftime('%Y-%m-%d %H:%M:%S UTC')}")
         print(f"Raw Registry Value Dump (72 bytes):")
         for i in range(0, len(raw_val), 16):
             chunk = raw_val[i:i+16]
             hex_str = ' '.join(f'{b:02x}' for b in chunk)
             asc_str = ''.join(chr(b) if 32 <= b <= 126 else '.' for b in chunk)
             print(f"  Offset 0x{i:02X}:  {hex_str:<48}  |{asc_str}|")
+        break
 
 print("\n================================================================================")
-print("=== EVIDENCE VERIFICATION RESULT (Question 8) ===")
+print("=== EVIDENCE VERIFICATION RESULT (Question 8 - Dynamic Evaluation) ===")
 print("================================================================================")
-print("Target Question 8: Which application was used to open any of the confidential document(s)?")
-print("Verified Answer:   WORDPAD.EXE")
-print("Corroborating Artifacts:")
-print("  1. WordPad Jumplist Database: 469e4a7982cea4d4.automaticDestinations-ms (Contains 5 confidential files)")
-print("  2. Windows Prefetch:          WORDPAD.EXE-942EAA71.pf (Last executed 2019-02-15 05:03:49 UTC)")
-print("  3. UserAssist Registry Hive:  wordpad.exe executed 5 times by Joker (Last: 2019-02-15 05:03:45 UTC)")
+if found_wordpad and pf_rec:
+    extracted_app_name = wordpad_decoded_name.split('\\')[-1].upper()
+    print(f"Identified Application: {extracted_app_name}")
+    print(f"Prefetch Last Modified: {si.last_modification_time} (MFT #{pf_rec.segment})")
+    print(f"UserAssist Run Count:   {wordpad_count}")
+    print(f"UserAssist Timestamp:   {wordpad_dt.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+    print(f"Corroboration Match:    {extracted_app_name == 'WORDPAD.EXE' and wordpad_count == 5}")
