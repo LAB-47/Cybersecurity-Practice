@@ -63,31 +63,31 @@ def extract_mft_attributes(image_path, rel_path='Users/Joker/haha.png'):
     print(f"File SHA-256:   {sha256}\n")
 
     # 1. $STANDARD_INFORMATION (0x10)
-    print("--- 1. $STANDARD_INFORMATION (0x10) Attribute ---")
+    print("--- 1. $STANDARD_INFORMATION (0x10) Attribute (Standard MACB Notation) ---")
     si_attr = rec.attributes[16][0]
     si_data = si_attr.data() if callable(si_attr.data) else si_attr.data
-    c_ft, m_ft, b_ft, a_ft = struct.unpack('<QQQQ', si_data[:32])
+    b_ft, m_ft, c_ft, a_ft = struct.unpack('<QQQQ', si_data[:32])
 
     def ft_to_str(ft):
         dt = datetime.datetime(1601, 1, 1, tzinfo=datetime.timezone.utc) + datetime.timedelta(microseconds=ft / 10)
         return dt.strftime('%Y-%m-%d %H:%M:%S UTC')
 
     print(f"Raw 32 Bytes: {' '.join(f'{b:02x}' for b in si_data[:32])}")
-    print(f"  Created Time ($SI.C):       0x{c_ft:016X} -> {ft_to_str(c_ft)}")
-    print(f"  Modified Time ($SI.M):      0x{m_ft:016X} -> {ft_to_str(m_ft)}")
-    print(f"  Accessed Time ($SI.A):      0x{a_ft:016X} -> {ft_to_str(a_ft)}")
-    print(f"  MFT Record Modified ($SI.B):0x{b_ft:016X} -> {ft_to_str(b_ft)}\n")
+    print(f"  [M] Modified Time ($SI.M):     0x{m_ft:016X} -> {ft_to_str(m_ft)}")
+    print(f"  [A] Accessed Time ($SI.A):     0x{a_ft:016X} -> {ft_to_str(a_ft)}")
+    print(f"  [C] Changed Time ($SI.C):      0x{c_ft:016X} -> {ft_to_str(c_ft)} (MFT Record Changed)")
+    print(f"  [B] Born / Created ($SI.B):    0x{b_ft:016X} -> {ft_to_str(b_ft)}\n")
 
     # 2. $FILE_NAME (0x30)
-    print("--- 2. $FILE_NAME (0x30) Attribute ---")
+    print("--- 2. $FILE_NAME (0x30) Attribute (Standard MACB Notation) ---")
     fn_attr = rec.attributes[48][0]
     fn_data = fn_attr.data() if callable(fn_attr.data) else fn_attr.data
-    fn_c_ft, fn_m_ft, fn_b_ft, fn_a_ft = struct.unpack('<QQQQ', fn_data[8:40])
+    fn_b_ft, fn_m_ft, fn_c_ft, fn_a_ft = struct.unpack('<QQQQ', fn_data[8:40])
 
-    print(f"  FN Created Time ($FN.C):    0x{fn_c_ft:016X} -> {ft_to_str(fn_c_ft)}")
-    print(f"  FN Modified Time ($FN.M):   0x{fn_m_ft:016X} -> {ft_to_str(fn_m_ft)}")
-    print(f"  FN Accessed Time ($FN.A):   0x{fn_a_ft:016X} -> {ft_to_str(fn_a_ft)}")
-    print(f"  FN MFT Modified ($FN.B):    0x{fn_b_ft:016X} -> {ft_to_str(fn_b_ft)}")
+    print(f"  [M] FN Modified Time ($FN.M):  0x{fn_m_ft:016X} -> {ft_to_str(fn_m_ft)}")
+    print(f"  [A] FN Accessed Time ($FN.A):  0x{fn_a_ft:016X} -> {ft_to_str(fn_a_ft)}")
+    print(f"  [C] FN Changed Time ($FN.C):   0x{fn_c_ft:016X} -> {ft_to_str(fn_c_ft)} (MFT Record Changed)")
+    print(f"  [B] FN Born / Created ($FN.B): 0x{fn_b_ft:016X} -> {ft_to_str(fn_b_ft)}")
 
 
 if __name__ == '__main__':
